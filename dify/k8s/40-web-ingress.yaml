@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dify-web-ingress
+  namespace: dify
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: higress
+  tls:
+  - hosts:
+    - dify.maywzh.com
+    secretName: dify-web-tls
+  rules:
+  - host: dify.maywzh.com
+    http:
+      paths:
+      - path: /console/api
+        pathType: Prefix
+        backend:
+          service:
+            name: dify-api-service
+            port:
+              number: 5001
+      - path: "/console(/|$)(.*)"
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: dify-web-service
+            port:
+              number: 3000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: dify-web-service
+            port:
+              number: 3000

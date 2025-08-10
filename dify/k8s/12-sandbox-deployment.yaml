@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-sandbox
+  namespace: dify
+  labels:
+    app: dify-sandbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dify-sandbox
+  template:
+    metadata:
+      labels:
+        app: dify-sandbox
+    spec:
+      containers:
+      - name: sandbox
+        image: langgenius/dify-sandbox:0.2.12
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8194
+          name: http
+        env:
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: dify-secrets
+              key: SANDBOX_API_KEY
+        - name: GIN_MODE
+          value: "release"
+        - name: WORKER_TIMEOUT
+          value: "15"
+        - name: ENABLE_NETWORK
+          value: "true"
+        - name: HTTP_PROXY
+          value: "http://dify-ssrf-proxy-service.dify.svc.cluster.local:3128"
+        - name: HTTPS_PROXY
+          value: "http://dify-ssrf-proxy-service.dify.svc.cluster.local:3128"
+        - name: SANDBOX_PORT
+          value: "8194"
+        volumeMounts:
+        - name: dependencies
+          mountPath: /dependencies
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8194
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8194
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: dependencies
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-sandbox-service
+  namespace: dify
+spec:
+  type: ClusterIP
+  selector:
+    app: dify-sandbox
+  ports:
+  - protocol: TCP
+    port: 8194
+    targetPort: http

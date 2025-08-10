@@ -1,0 +1,327 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+    creationTimestamp: "2025-08-07T11:29:39Z"
+    generation: 1
+    labels:
+      app: higress-console-grafana
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-grafana
+    namespace: higress-system
+    resourceVersion: "47861903"
+    uid: 4c591293-21c9-4f5e-81ba-2fcdc45c4848
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: higress-console-grafana
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: higress-console-grafana
+      spec:
+        containers:
+        - image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/grafana:9.3.6
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 3000
+            timeoutSeconds: 1
+          name: grafana
+          ports:
+          - containerPort: 3000
+            name: http-grafana
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /robots.txt
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 2
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /var/lib/grafana
+            name: higress-console-grafana
+          - mountPath: /etc/grafana/grafana.ini
+            name: config
+            subPath: grafana.ini
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 472
+          runAsUser: 0
+          supplementalGroups:
+          - 0
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: higress-console-grafana
+          persistentVolumeClaim:
+            claimName: higress-console-grafana
+        - configMap:
+            defaultMode: 420
+            name: higress-console-grafana
+          name: config
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-08-07T11:49:01Z"
+      lastUpdateTime: "2025-08-07T11:49:01Z"
+      message: ReplicaSet "higress-console-grafana-7c9d9b4fcc" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-08-10T06:27:31Z"
+      lastUpdateTime: "2025-08-10T06:27:31Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+    creationTimestamp: "2025-08-07T11:29:39Z"
+    generation: 1
+    labels:
+      app: higress-console-prometheus
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-prometheus
+    namespace: higress-system
+    resourceVersion: "47861883"
+    uid: 2b7586ee-f3b1-4062-83c3-84a0c4aea726
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: higress-console-prometheus
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: higress-console-prometheus
+      spec:
+        containers:
+        - args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --web.external-url=/prometheus
+          - --storage.tsdb.path=/prometheus
+          - --storage.tsdb.retention=6h
+          command:
+          - /bin/prometheus
+          image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/prometheus:v2.40.7
+          imagePullPolicy: IfNotPresent
+          name: prometheus
+          ports:
+          - containerPort: 9090
+            name: http-prometheus
+            protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 2Gi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /prometheus
+            name: data
+          - mountPath: /etc/prometheus
+            name: config
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          runAsUser: 0
+        serviceAccount: higress-console-prometheus
+        serviceAccountName: higress-console-prometheus
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: higress-console-prometheus
+        - configMap:
+            defaultMode: 420
+            name: higress-console-prometheus
+          name: config
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-08-07T11:48:41Z"
+      lastUpdateTime: "2025-08-07T11:48:41Z"
+      message: ReplicaSet "higress-console-prometheus-7f8b88f699" has successfully
+        progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-08-10T06:27:31Z"
+      lastUpdateTime: "2025-08-10T06:27:31Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+    creationTimestamp: "2025-08-07T11:29:39Z"
+    generation: 1
+    labels:
+      app: higress-console-loki
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-loki
+    namespace: higress-system
+    resourceVersion: "47861911"
+    uid: 41d09644-176d-48c7-9bf1-e586269a5041
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: higress-console-loki
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: higress-console-loki
+      spec:
+        containers:
+        - args:
+          - -config.file=/etc/loki/config/config.yaml
+          - -target=all
+          image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/loki:2.9.4
+          imagePullPolicy: IfNotPresent
+          name: loki
+          ports:
+          - containerPort: 3100
+            name: http-metrics
+            protocol: TCP
+          - containerPort: 9095
+            name: grpc
+            protocol: TCP
+          - containerPort: 7946
+            name: http-memberlist
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /ready
+              port: http-metrics
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp
+          - mountPath: /etc/loki/config
+            name: config
+          - mountPath: /etc/loki/runtime-config
+            name: runtime-config
+          - mountPath: /var/loki
+            name: storage
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          runAsUser: 0
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: higress-console-loki
+        - emptyDir: {}
+          name: tmp
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: config.yaml
+              path: config.yaml
+            name: higress-console-loki
+          name: config
+        - configMap:
+            defaultMode: 420
+            name: higress-console-loki-runtime
+          name: runtime-config
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2025-08-07T14:30:37Z"
+      lastUpdateTime: "2025-08-07T14:30:37Z"
+      message: ReplicaSet "higress-console-loki-9d4b95cd6" has successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2025-08-10T06:27:31Z"
+      lastUpdateTime: "2025-08-10T06:27:31Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""

@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dify-config
+  namespace: dify
+data:
+  # General Settings
+  DEPLOY_ENV: "PRODUCTION"
+  LOG_LEVEL: "INFO"
+  CHECK_UPDATE_URL: "https://updates.dify.ai"
+  MIGRATION_ENABLED: "true"
+  INIT_PASSWORD: ""
+  ENABLE_REQUEST_LOGGING: "False"
+  LANG: "en_US.UTF-8"
+  LC_ALL: "en_US.UTF-8"
+  PYTHONIOENCODING: "utf-8"
+  LOG_FILE: "/app/logs/server.log"
+  LOG_FILE_MAX_SIZE: "20"
+  LOG_FILE_BACKUP_COUNT: "5"
+  LOG_DATEFORMAT: "%Y-%m-%d %H:%M:%S"
+  LOG_TZ: "UTC"
+  DEBUG: "false"
+  FLASK_DEBUG: "false"
+  OPENAI_API_BASE: "https://api.openai.com/v1"
+  FILES_ACCESS_TIMEOUT: "300"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+  REFRESH_TOKEN_EXPIRE_DAYS: "30"
+  APP_MAX_ACTIVE_REQUESTS: "0"
+  APP_MAX_EXECUTION_TIME: "1200"
+  DIFY_BIND_ADDRESS: "0.0.0.0"
+  DIFY_PORT: "5001"
+  SERVER_WORKER_AMOUNT: "1"
+  SERVER_WORKER_CLASS: "gevent"
+  SERVER_WORKER_CONNECTIONS: "10"
+  GUNICORN_TIMEOUT: "360"
+  API_TOOL_DEFAULT_CONNECT_TIMEOUT: "10"
+  API_TOOL_DEFAULT_READ_TIMEOUT: "60"
+  ENABLE_WEBSITE_JINAREADER: "true"
+  ENABLE_WEBSITE_FIRECRAWL: "true"
+  ENABLE_WEBSITE_WATERCRAWL: "true"
+
+  # Service URLs - External and Internal
+  # External URLs (public)
+  # Note: Leave as host-only; appends "/console/api" and "/api" where needed in app code/web entrypoint
+  CONSOLE_API_URL: "https://dify-api.maywzh.com"
+  APP_API_URL: "https://dify-api.maywzh.com"
+  CONSOLE_WEB_URL: "https://dify.maywzh.com"
+  APP_WEB_URL: "https://dify.maywzh.com"
+  # Internal service URL (cluster only)
+  SERVICE_API_URL: "http://dify-api-service.dify.svc.cluster.local:5001"
+  FILES_URL: ""
+  INTERNAL_FILES_URL: ""
+
+  # Database (External)
+  DB_HOST: "dbnode0.maywzh.com"
+  DB_PORT: "5432"
+  DB_DATABASE: "dify"
+
+  # Redis (External)
+  REDIS_HOST: "dbnode0.maywzh.com"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  CELERY_BROKER_URL: "redis://default:0dupl423redis@dbnode0.maywzh.com:6379/1"
+
+  # Vector Store (External)
+  VECTOR_STORE: "milvus"
+  MILVUS_URI: "http://dbnode0.maywzh.com:19530"
+
+  # Storage - S3 Configuration
+  STORAGE_TYPE: "s3"
+  S3_ENDPOINT: "https://minio.maywzh.com"
+  S3_REGION: "cn-east-shanghai"
+  S3_BUCKET_NAME: "dify"
+  S3_USE_AWS_MANAGED_IAM: "false"
+
+  # Sandbox configuration
+  CODE_EXECUTION_ENDPOINT: "http://dify-sandbox-service.dify.svc.cluster.local:8194"
+
+  # Plugin daemon configuration
+  PLUGIN_DAEMON_URL: "http://dify-plugin-daemon-service.dify.svc.cluster.local:5002"
+  PLUGIN_MAX_PACKAGE_SIZE: "52428800"
+
+  # SSRF Proxy
+  SSRF_PROXY_HTTP_URL: "http://dify-ssrf-proxy-service.dify.svc.cluster.local:3128"
+  SSRF_PROXY_HTTPS_URL: "http://dify-ssrf-proxy-service.dify.svc.cluster.local:3128"

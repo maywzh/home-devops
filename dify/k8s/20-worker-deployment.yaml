@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-worker
+  namespace: dify
+  labels:
+    app: dify-worker
+spec:
+  replicas: 1 # Usually, you start with one worker and scale as needed
+  selector:
+    matchLabels:
+      app: dify-worker
+  template:
+    metadata:
+      labels:
+        app: dify-worker
+    spec:
+      initContainers:
+      - name: init-db
+        image: postgres:15-alpine
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: DB_USERNAME
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: DB_PASSWORD
+        envFrom:
+          - configMapRef:
+              name: dify-config
+        command:
+          - sh
+          - -c
+          - |
+            set -e
+            echo "Ensuring database ${DB_DATABASE} exists on ${DB_HOST}:${DB_PORT}..."
+            export PGPASSWORD="${DB_PASSWORD}"
+            # Wait for Postgres to be reachable
+            until pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USERNAME}"; do
+              echo "Waiting for Postgres..."
+              sleep 3
+            done
+            # Create DB if missing
+            if ! psql -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USERNAME}" -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_DATABASE}'" | grep -q 1; then
+              echo "Database ${DB_DATABASE} not found, creating..."
+              createdb -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USERNAME}" "${DB_DATABASE}" || {
+                echo "WARN: failed to create database automatically. Check user privileges (CREATEDB).";
+              }
+            else
+              echo "Database ${DB_DATABASE} already exists."
+            fi
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+      containers:
+      - name: worker
+        image: langgenius/dify-api:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: MODE
+            value: "worker"
+          # Mount credentials from Secret
+          - name: DB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: DB_USERNAME
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: DB_PASSWORD
+          - name: REDIS_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: REDIS_USERNAME
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: REDIS_PASSWORD
+          - name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: SECRET_KEY
+          - name: CODE_EXECUTION_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: SANDBOX_API_KEY
+          - name: PLUGIN_DIFY_INNER_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: PLUGIN_DIFY_INNER_API_KEY
+          - name: S3_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: S3_ACCESS_KEY
+          - name: S3_SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: dify-secrets
+                key: S3_SECRET_KEY
+        envFrom:
+          - configMapRef:
+              name: dify-config
+        volumeMounts:
+        - name: dify-storage
+          mountPath: /app/api/storage
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: dify-storage
+        persistentVolumeClaim:
+          claimName: dify-storage-pvc-longhorn-rwx

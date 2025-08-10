@@ -1,0 +1,101 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-08-07T14:29:33Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-grafana
+    namespace: higress-system
+    resourceVersion: "47146981"
+    uid: 39700f2c-4748-4f34-abd3-7e5d6102eabc
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: local-storage
+    volumeMode: Filesystem
+    volumeName: higress-grafana-pv
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-08-07T14:29:33Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-prometheus
+    namespace: higress-system
+    resourceVersion: "47146987"
+    uid: 46bb0f3a-c38d-4913-83e2-8b7b13263542
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: local-storage
+    volumeMode: Filesystem
+    volumeName: higress-loki-pv
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      meta.helm.sh/release-name: higress
+      meta.helm.sh/release-namespace: higress-system
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-08-07T14:29:33Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    labels:
+      app.kubernetes.io/managed-by: Helm
+    name: higress-console-loki
+    namespace: higress-system
+    resourceVersion: "47147052"
+    uid: d95d171f-831f-431d-870a-13e70d671957
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: local-storage
+    volumeMode: Filesystem
+    volumeName: higress-prometheus-pv
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    phase: Bound
+kind: List
+metadata:
+  resourceVersion: ""

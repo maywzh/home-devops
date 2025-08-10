@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-api-service
+  namespace: dify
+spec:
+  type: ClusterIP # Internal service, not exposed to the outside world directly
+  selector:
+    app: dify-api
+  ports:
+  - protocol: TCP
+    port: 5001
+    targetPort: http

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dify-ssrf-proxy
+  namespace: dify
+  labels:
+    app: dify-ssrf-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dify-ssrf-proxy
+  template:
+    metadata:
+      labels:
+        app: dify-ssrf-proxy
+    spec:
+      containers:
+      - name: ssrf-proxy
+        image: ubuntu/squid:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3128
+          name: http
+        env:
+        - name: HTTP_PORT
+          value: "3128"
+        - name: COREDUMP_DIR
+          value: "/var/spool/squid"
+        - name: REVERSE_PROXY_PORT
+          value: "8194"
+        - name: SANDBOX_HOST
+          value: "dify-sandbox-service.dify.svc.cluster.local"
+        - name: SANDBOX_PORT
+          value: "8194"
+        volumeMounts:
+        - name: squid-config
+          mountPath: /etc/squid/squid.conf.template
+          subPath: squid.conf.template
+        - name: entrypoint
+          mountPath: /docker-entrypoint-mount.sh
+          subPath: docker-entrypoint.sh
+      volumes:
+      - name: squid-config
+        configMap:
+          name: dify-ssrf-proxy-config
+      - name: entrypoint
+        configMap:
+          name: dify-ssrf-proxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dify-ssrf-proxy-service
+  namespace: dify
+spec:
+  type: ClusterIP
+  selector:
+    app: dify-ssrf-proxy
+  ports:
+  - protocol: TCP
+    port: 3128
+    targetPort: http
