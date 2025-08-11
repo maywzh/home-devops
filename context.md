@@ -1,12 +1,70 @@
 # 本地局域网 Kubernetes 集群配置概览
 
 - **集群名称**：`kubernetes-admin@kubernetes`
+- **Kubernetes 版本**：v1.32.0 (服务端) / v1.33.3 (客户端)
 - **用途**：局域网服务部署、测试与自动化
 - **架构**：多节点（Debian/Ubuntu），多 control-plane，支持高可用
+- **节点总数**：11 个节点
+  - **Control Plane 节点**：3 个 (debian-node3, debian-node4, node)
+  - **Worker 节点**：8 个 (6个 Debian + 4个 Ubuntu)
+  - **操作系统**：Debian GNU/Linux 12 (bookworm) 和 Ubuntu 24.04.2 LTS
+  - **容器运行时**：containerd 1.7.25-1.7.27
 - **默认 Ingress 控制器**：Higress（多协议、可视化、支持 cert-manager 联动）
 - **证书自动化**：cert-manager（ACME + Cloudflare DNS-01）
 - **默认 LoadBalancer**：MetalLB（为裸金属集群提供 LoadBalancer 服务）
+- **存储解决方案**：Longhorn（分布式块存储，默认 StorageClass）+ local-path（本地路径存储）
 - **域名示例**：`*.maywzh.com` 通过 Cloudflare DNS 解析
+- **网关入口 IP**：192.168.2.152 (MetalLB 分配)
+
+## 集群节点详情
+
+### Control Plane 节点
+- **debian-node3** (192.168.2.110) - Debian 12, Ready
+- **debian-node4** (192.168.2.109) - Debian 12, Ready
+- **node** (192.168.2.111) - Debian 12, Ready,SchedulingDisabled
+
+### Worker 节点
+**Debian 节点：**
+- **debian-node1** (192.168.2.112) - Debian 12, Ready
+- **debian-node2** (192.168.2.113) - Debian 12, Ready
+- **debian-node5** (192.168.2.114) - Debian 12, Ready
+- **debian-node6** (192.168.2.116) - Debian 12, Ready (最新加入，33小时前)
+
+**Ubuntu 节点：**
+- **ubuntu-node0** (192.168.2.117) - Ubuntu 24.04.2 LTS, Ready
+- **ubuntu-node1** (192.168.2.118) - Ubuntu 24.04.2 LTS, Ready
+- **ubuntu-node2** (192.168.2.119) - Ubuntu 24.04.2 LTS, Ready
+- **ubuntu-node4** (192.168.2.121) - Ubuntu 24.04.2 LTS, Ready
+
+## 核心组件状态
+
+### 命名空间概览
+- **cert-manager** (121天) - 证书管理
+- **dify** (2天16小时) - AI 应用平台
+- **external-dns** (122天) - 外部 DNS 管理
+- **higress-system** (4天4小时) - 网关系统
+- **langfuse** (2天20小时) - LLM 应用监控
+- **local-path-storage** (32小时) - 本地路径存储
+- **longhorn-system** (29小时) - 分布式存储
+- **metallb-system** (188天) - 负载均衡器
+- **monitoring** (8天) - 监控系统
+
+### 存储系统
+- **Longhorn**：分布式块存储，默认 StorageClass，支持卷扩展
+- **local-path**：本地路径存储，WaitForFirstConsumer 绑定模式
+- **存储组件状态**：所有 Longhorn 组件运行正常，包括 CSI 驱动、管理器、UI 等
+
+### 当前暴露的服务
+通过 Higress 网关暴露的服务包括：
+- **dify.maywzh.com** - Dify AI 应用平台
+- **dify-api.maywzh.com** - Dify API 服务
+- **langfuse.maywzh.com** - Langfuse 监控平台
+- **langfuse-worker.maywzh.com** - Langfuse Worker 服务
+- **higress.maywzh.com** - Higress 网关管理
+- **higress-console.maywzh.com** - Higress 控制台
+- **longhorn.maywzh.com** - Longhorn 存储管理界面
+
+所有服务均通过 HTTPS (443) 和 HTTP (80) 端口暴露，证书由 cert-manager 自动管理。
 
 ---
 ## Higress 简介
@@ -31,27 +89,41 @@ Higress 通过统一入口和自动化能力，极大提升了云原生环境下
 
 1. **默认 IngressClass**：higress 被设置为集群默认 IngressClass，所有未指定 ingressClassName 的 Ingress 也会被 Higress 接管。
 
-2. **核心组件部署**：
-   - higress-gateway（LoadBalancer 类型，暴露 80/443，分配了 MetalLB IP）
-   - higress-controller（负责控制面）
-   - higress-console（可视化管理，配套 Grafana/Prometheus/Loki 监控栈）
+2. **核心组件部署状态**：
+   - **higress-gateway**：2 个副本运行中，LoadBalancer 类型，暴露 80/443 端口，MetalLB 分配 IP 192.168.2.152
+   - **higress-controller**：1 个副本运行中，负责控制面管理
+   - **higress-console**：1 个副本运行中，提供可视化管理界面
+   - **监控栈组件**：
+     - higress-console-grafana：可视化仪表盘
+     - higress-console-loki：日志聚合存储
+     - higress-console-prometheus：指标采集
 
 3. **流量入口与证书**：
-   - 绝大多数 Ingress（如 dify、langfuse、higress-console 等）都通过 higress-gateway 统一暴露，域名均指向 192.168.2.152。
-   - 证书 secretName 统一为 `*-tls`，通过 cert-manager 自动签发（如 higress-console-tls、higress-gateway-tls）。
-   - 相关 ConfigMap（如 domain-higress.maywzh.com）开启了 enableHttps，绑定了证书。
+   - 所有 Ingress 资源（dify、langfuse、higress-console、longhorn 等）统一通过 higress-gateway 暴露
+   - 统一入口 IP：192.168.2.152，支持 HTTP (80) 和 HTTPS (443)
+   - 证书自动化：所有域名证书由 cert-manager 自动签发和续期
+   - 当前活跃域名：
+     - dify.maywzh.com / dify-api.maywzh.com
+     - langfuse.maywzh.com / langfuse-worker.maywzh.com
+     - higress.maywzh.com / higress-console.maywzh.com
+     - longhorn.maywzh.com
 
-4. **自定义路由与 AI 服务**：
-   - 存在 ai-route-gemini-25-pro、ai-route-glm-45 等 Ingress，使用了 Higress 的自定义注解（如 higress.io/destination、higress.io/exact-match-header-x-higress-llm-model），实现了基于 header 的智能路由和后端服务动态分发。
-   - 路由规则和模型映射通过 ConfigMap 动态配置，支持多 AI 服务统一入口。
+4. **AI 智能路由**：
+   - **ai-route-gemini-25-pro.internal**：Gemini 2.5 Pro 模型路由
+   - **ai-route-glm-45.internal**：GLM-4.5 模型路由
+   - 支持基于 header 的智能分流和模型映射
+   - 统一 AI 服务入口：higress.maywzh.com
 
-5. **安全与可观测性**：
-   - 配置了 CA 根证书（higress-ca-root-cert），支持 mTLS。
-   - 配置了 Prometheus、Loki、Grafana 监控与日志采集，Promtail 负责日志推送。
+5. **高可用与负载均衡**：
+   - Higress Gateway 采用 2 副本部署，分布在不同节点
+   - MetalLB Speaker 在所有 11 个节点运行，确保负载均衡高可用
+   - 控制器组件分布式部署，避免单点故障
 
-6. **自动化与声明式管理**：
-   - 绝大多数 Ingress 资源由 Higress 控制器自动生成和管理（带有 `PLEASE DO NOT EDIT DIRECTLY` 注解）。
-   - 证书签发、路由、AI 服务注册等均声明式、自动化，无需手动干预。
+6. **监控与可观测性**：
+   - 完整的监控栈：Prometheus + Grafana + Loki
+   - 实时日志采集和分析
+   - 网关流量、性能指标监控
+   - 可视化管理界面：higress-console.maywzh.com
 
 ---
 
@@ -156,29 +228,38 @@ spec:
 
 ---
 
-## 集群 Higress 实际配置分析
+## 集群当前状态总结
 
-### 1. 流量入口
-- Higress 作为默认 IngressClass，统一接管所有 Ingress 资源。
-- 流量通过 `higress-gateway`（LoadBalancer 类型 Service，80/443 端口，MetalLB 分配 IP 192.168.2.152）统一暴露。
-- 主要业务域名（如 dify、langfuse、higress-console 等）均指向该入口，实现南北向流量统一管理。
+### 1. 集群健康状态
+- **节点状态**：11 个节点全部 Ready，包括 3 个 control-plane 节点和 8 个 worker 节点
+- **核心组件**：所有关键组件（Higress、cert-manager、MetalLB、Longhorn）运行正常
+- **存储系统**：Longhorn 分布式存储已部署并设为默认 StorageClass，所有组件健康运行
+- **网络**：MetalLB 在所有节点部署 Speaker，提供高可用负载均衡
 
-### 2. AI 路由能力
-- 存在多条 AI 服务路由（如 ai-route-gemini-25-pro、ai-route-glm-45），通过 Ingress 及 ConfigMap 动态配置。
-- 支持基于 header（如 x-higress-llm-model）智能分流、路径前缀匹配、后端服务动态分发。
-- 路由规则声明式管理，支持多 AI 服务统一入口和模型映射。
+### 2. 服务暴露现状
+- **统一入口**：所有外部服务通过 Higress Gateway (192.168.2.152) 统一暴露
+- **当前服务**：
+  - **AI 平台**：Dify (dify.maywzh.com, dify-api.maywzh.com)
+  - **监控工具**：Langfuse (langfuse.maywzh.com, langfuse-worker.maywzh.com)
+  - **管理界面**：Higress Console (higress-console.maywzh.com), Longhorn UI (longhorn.maywzh.com)
+  - **AI 路由**：智能模型路由 (higress.maywzh.com)
+- **证书管理**：所有域名 HTTPS 证书由 cert-manager 自动管理，无需人工干预
 
-### 3. 证书自动化
-- 所有 Ingress 通过 `tls.secretName` 及 cert-manager 注解实现自动签发证书（如 higress-gateway-tls、higress-console-tls）。
-- 相关 ConfigMap（如 domain-higress.maywzh.com）开启 enableHttps，自动绑定证书。
-- 证书生命周期、续期、分发全自动，无需人工干预。
+### 3. 存储与持久化
+- **主存储**：Longhorn 分布式块存储，支持副本、快照、备份
+- **辅助存储**：local-path 本地路径存储，用于临时或测试用途
+- **存储状态**：所有 CSI 组件、管理器、UI 组件运行正常
 
 ### 4. 监控与可观测性
-- Higress 配套部署了 Prometheus、Loki、Grafana 监控栈。
-- Promtail 负责采集和推送网关日志，Loki 负责日志存储与查询。
-- Grafana 提供可视化仪表盘，Prometheus 采集流量、性能等指标。
-- 支持自定义 access log 格式和多维度监控。
+- **网关监控**：Higress 集成 Prometheus + Grafana + Loki 完整监控栈
+- **日志管理**：统一日志采集、存储和查询
+- **可视化**：Grafana 仪表盘提供实时监控视图
+
+### 5. 最新变化
+- **新增节点**：debian-node6 (192.168.2.116) 于 33 小时前加入集群
+- **存储升级**：Longhorn 系统于 29 小时前部署，替代原有存储方案
+- **服务部署**：Dify 和 Langfuse 等 AI 相关服务近期部署完成
 
 ---
 
-> 以上为本集群 Higress 关键能力的实际落地情况，涵盖流量统一入口、AI 智能路由、证书自动化与全栈可观测。
+> **集群状态**：生产就绪，所有核心组件健康运行，具备高可用、自动化证书管理、统一流量入口和完整监控能力。适合部署各类云原生应用和 AI 服务。
